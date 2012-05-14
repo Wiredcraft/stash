@@ -45,15 +45,7 @@ Stash.prototype.rm = function(key, callback) {
  * characters with '.' and removes cruft from the front of the key.
  */
 Stash.prototype.key = function(key) {
-    if (!this._file) {
-        return key.replace(/^\W/g, '').replace(/\W/g, '.');
-    } else {
-        // Keep the '/' as such, will be used to maintain subfolder structure
-        // Prevent from walking up the folders ../)
-        return key.replace(/^\W/g, '')
-                  .replace(/[^a-zA-Z0-9_\/]/g, '.')
-                  .replace(/\/[\.]+\//g, '.');
-    }
+    return key.replace(/^\W/g, '').replace(/\W/g, '.');
 };
 
 /**
@@ -100,6 +92,33 @@ Stash.prototype._flush = function(callback) {
     } else {
         // recursively walk through the subfolders looking for the _file
         // TO COMPLETE
+
+        // fs.readdir(that._path, function(err, files) {
+        //     if (err) throw err;
+        //     
+        //     // Remove files that are no longer in the database.
+        //     for (var i = 0; i < files.length; i++) {
+        //         var key = files[i].replace(/.json$/, '');
+        //         if (that._docs[key]) continue;
+        // 
+        //         queue++;
+        //         fs.unlink(
+        //             path.join(that._path, files[i]),
+        //             dequeue
+        //         );
+        //     }
+        //     // Write files from database.
+        //     for (var key in that._docs) {
+        //         queue++;
+        //         fs.writeFile(
+        //             path.join(that._path, key + '.json'),
+        //             JSON.stringify(that._docs[key], null, 4),
+        //             'utf8',
+        //             dequeue
+        //         );
+        //     }
+        // });
+        
     }
 };
 
@@ -109,26 +128,51 @@ Stash.prototype._flush = function(callback) {
  */
 Stash.prototype._load = function() {
     try { fs.mkdirSync(this._path, 0755); } catch(e) {};
+    
+    var that = this;
+    console.log(JSON.stringify(that));
 
     // either load the files from within the _path folder
     // or recursively walk through the subfolders looking for _file 
-    if (!this._file) {
-        var files = fs.readdirSync(this._path);
+    if (!that._file) {
+        var files = fs.readdirSync(that._path);
         for (var i = 0; i < files.length; i++) {
             var key = files[i].replace(/.json$/, ''),
-                data = fs.readFileSync(path.join(this._path, files[i]), 'utf8');
+                data = fs.readFileSync(path.join(that._path, files[i]), 'utf8');
             try {
-                this._docs[key] = JSON.parse(data);
+                that._docs[key] = JSON.parse(data);
             } catch (e) {
                 console.error('Could not load %s %s', key, e);
             }
         }
     } else {
-        var docs = this._docs;
-        var recRead = function(path) {
-            // var files = fs
-            // TO COMPLETE
+        // var docs = that._docs;
+        // var filesJson = [];
+        var rootPath = that._path;
+        
+        var readFolder = function(curPath, root) {
+            var files = fs.readdirSync(curPath);
+            for (var i = 0; i < files.length; i++) {
+                var stat = fs.statSync(path.join(curPath, files[i]));
+                if (stat.isDirectory()) {
+                    // if is folder recursive search
+                    readFolder(path.join(curPath, files[i]), root);
+                } else {
+                    // if is file, only consider whether the filename is matching
+                    if (files[i] === that._file) {
+                        // remove the root of the file and convert remaining / by __
+                        var key = curPath.replace(root+'/', '').replace('/', '__'),
+                            data = fs.readFileSync(path.join(curPath, files[i]), 'utf8');
+                        try {
+                            that._docs[key] = JSON.parse(data);
+                        } catch (e) {
+                            console.error('Could not load %s %s', key, e);
+                        }
+                    }
+                }
+            }
         }
+        readFolder(that._path, rootPath);
     }
 };
 
@@ -136,4 +180,3 @@ module.exports = function(path, file) {
     !stashes[path] && (stashes[path] = new Stash(path, file));
     return stashes[path];
 };
-
