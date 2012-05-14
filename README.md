@@ -27,6 +27,18 @@ stash.del('sandwiches', function() {
     console.log(stash.list());
 });
 
+### Recursive stash
+
+We can consider the data to be saved in subfolders using always the same name for the file. The key is then the subfolder path, converting the / to __.
+
+ex. 
+    stash root: /path/to/stash
+    stash saved: $ROOT/some/sub/folder/data.json
+    key: some__sub__folder
+    
+// Create a recursive database at the 'data' directory, using parameters.json to store
+var stash = require('stash')('data', 'parameters.json')
+
 ### Todo
 
 - Automatically reload file when it's changed (multi process...)
