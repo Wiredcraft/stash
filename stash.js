@@ -130,8 +130,7 @@ Stash.prototype._load = function() {
     try { fs.mkdirSync(this._path, 0755); } catch(e) {};
     
     var that = this;
-    console.log(JSON.stringify(that));
-
+    
     // either load the files from within the _path folder
     // or recursively walk through the subfolders looking for _file 
     if (!that._file) {
